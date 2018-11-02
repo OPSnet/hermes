@@ -1,0 +1,47 @@
+nick: hermes
+name: hermes bot
+site:
+  tld: apollo.rip
+  url: https://apollo.rip
+irc:
+  host: 127.0.0.1
+  port: 6667
+  channels:
+    apollo:
+      name: apollo
+    devs:
+      name: devs
+      min_level: 800
+  oper:
+    name: hermes
+    password: password
+  nickserv:
+    password: password
+youtube_api: key
+database:
+  host: 127.0.0.1
+  port: 33060
+  dbname: gazelle
+  username: gazelle
+  password: password
+interview:
+  class_id: 30
+  min_level: 800
+  speedtest_urls:
+      - "(?:https?:\\/\\/)?(?:www\\.|beta\\.|legacy\\.)?speedtest\\.net\\/(?:my-)?result(?:\\/[\\w]{2})*\\/(\\d+)(?:\\.png)?"
+  site: https://interview.apollo.rip
+  channels:
+      - interview
+      - interview2
+      - interview3
+      - interview4
+      - interview5
+      - interview6
+      - interview7
+      - interview8
+      - interview9
+persist:
+  path: "!HERMES!/persist.dat"
+admins:
+  - itismadness
+

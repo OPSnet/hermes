@@ -1,0 +1,8 @@
+.idea/
+.DS_STORE
+config.yml
+*.py[cso]
+build/
+dist/
+*.egg-info/
+*.swp
