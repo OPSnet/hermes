@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Core Hermes module which contains all of the logic for the Bot and running the proper commands
-based off what modules have been loaded and registered for the bot. The file also contains some
-utility functions that are used within the bot, those these functions may be moved elsewhere
-as appopriate.
+Core Hermes module which contains all of the logic for the Bot and running the proper
+commands based off what modules have been loaded and registered for the bot. The file
+also contains some utility functions that are used within the bot, those these
+functions may be moved elsewhere as appopriate.
 """
 import argparse
 import locale
@@ -17,11 +17,13 @@ import ssl
 import sys
 import threading
 import time
+import irc
 
-from irc.bot import SingleServerIRCBot
 from irc.connection import Factory
 
+from .api import GazelleAPI
 from .database import GazelleDB
+from .irc import IRCBot
 from .loader import load_modules
 from .utils import get_git_hash, check_pid, load_config, DotDict
 from .cache import Cache
@@ -52,7 +54,7 @@ def set_verbosity(verbose=0, level=logging.INFO):
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
-class Hermes(SingleServerIRCBot):
+class Hermes(IRCBot):
     def __init__(self):
         self.logger = LOGGER
         self.dir = HERMES_DIR
@@ -87,13 +89,25 @@ class Hermes(SingleServerIRCBot):
         self.database = None
 
         if 'socket' in self.config:
-            self.listener = Listener(self.config['socket']['host'], self.config['socket']['port'])
+            self.listener = Listener(
+                self.config['socket']['host'],
+                self.config['socket']['port']
+            )
 
-        self.database = GazelleDB(self.config.database.host,
-                                    self.config.database.dbname,
-                                    self.config.database.username,
-                                    self.config.database.password)
-
+        if 'database' in self.config:
+            self.database = GazelleDB(
+                self.config.database.host,
+                self.config.database.dbname,
+                self.config.database.username,
+                self.config.database.password
+            )
+        elif 'api' in self.config:
+            self.database = GazelleAPI(
+                self.config.site.url,
+                self.config.api.id,
+                self.config.api.key,
+                self.cache
+            )
 
         self.logger.info("-> Loaded DB")
 
@@ -103,7 +117,7 @@ class Hermes(SingleServerIRCBot):
                 if hasattr(mod, 'setup'):
                     mod.setup(self)
                 self.logger.info("Loaded module: {}".format(name))
-            except:
+            except BaseException:
                 self.logger.exception("Error Module: {}".format(name))
 
         if 'ssl' in self.config.irc and self.config.irc.ssl is True:
@@ -118,20 +132,34 @@ class Hermes(SingleServerIRCBot):
             setattr(self, attr, self._dispatch)
         self.logger.info("-> Loaded IRC")
 
+    def set_nick(self, connection):
+        connection.send_raw('NICK {}'.format(self.nick))
+        connection.send_raw('SETIDENT {} {}'.format(self.nick, self.nick))
+        connection.send_raw("SETHOST {}.{}".format(self.nick, self.config.site.tld))
+        if hasattr(self.config.irc, "nickserv"):
+            self.logger.info("-> Identifying with NickServ")
+            connection.privmsg("NickServ", "IDENTIFY {}".format(
+                self.config.irc.nickserv.password)
+            )
+
     def on_nicknameinuse(self, connection, event):
         """
-        Executed if someone else has already taken the bot's nickname and we cannot take it
-        back via NickServ. We consider this a fatal error as this shouldn't happen in normal
-        usage and would happen if we tried to run the bot twice (which is unnecessary).
+        Executed if someone else has already taken the bot's nickname and we cannot
+        take it back via NickServ. Kill the offending user, and take the nick
+        through blood.
 
         :raises: SystemError
         """
-        raise SystemError("*** ERROR: Bot's nickname in use! ***")
+        self.logger.info("-> killing user named {}".format(self.nick))
+        connection.kill(self.nick)
+        self.set_nick(connection)
+        # raise SystemError("*** ERROR: Bot's nickname in use! ***")
 
     def on_erroneusenickname(self, connection, event):
         """
-        Executed if the nickname contains illegal characters (such as #) which IRC does not
-        support. This is considered a fatal error and should only happen on poor configuration.
+        Executed if the nickname contains illegal characters (such as #) which IRC does
+        not support. This is considered a fatal error and should only happen on poor
+        configuration.
 
         :raises: SystemError
         """
@@ -139,9 +167,9 @@ class Hermes(SingleServerIRCBot):
 
     def on_welcome(self, connection, event):
         """
-        Executed when the bot connects to the server (and gets the "welcome message"). We use
-        this to do some initialization routines (like joining the necessary channels, etc.) that
-        the bot needs to operate
+        Executed when the bot connects to the server (and gets the "welcome message").
+        We use this to do some initialization routines (like joining the necessary
+        channels, etc.) that the bot needs to operate
 
         :param connection:
         :param event:
@@ -153,19 +181,15 @@ class Hermes(SingleServerIRCBot):
             self.logger.info("-> Setting OPER")
             connection.send_raw("OPER {} {}".format(self.config.irc.oper.name,
                                                     self.config.irc.oper.password))
-        connection.send_raw('NICK {}'.format(self.nick))
-        connection.send_raw('SETIDENT {} {}'.format(self.nick, self.nick))
-        if hasattr(self.config.irc, "nickserv"):
-            self.logger.info("-> Identifying with NickServ")
-            connection.privmsg("NickServ", "IDENTIFY {}".format(self.config.irc.nickserv.password))
 
-        connection.send_raw("SETHOST {}.{}".format(self.nick, self.config.site.tld))
-        if self.listener is not None and self.listener.is_alive() == False:
+        self.set_nick(connection)
+
+        if self.listener is not None and not self.listener.is_alive():
             self.listener.set_connection(connection)
             self.listener.start()
-        if hasattr(self.config.irc, "channels") and isinstance(self.config.irc.channels, dict):
+        if hasattr(self.config.irc, "channels") and \
+                isinstance(self.config.irc.channels, dict):
             for name in self.config.irc.channels:
-                channel = self.config.irc.channels[name]
                 self.logger.info("-> Entering {}".format(name))
                 connection.send_raw("SAJOIN {} #{}".format(self.nick, name))
 
@@ -186,9 +210,10 @@ class Hermes(SingleServerIRCBot):
                     func(self, connection, event, match)
 
     def check_admin(self, event):
-        return event.source.nick in self.config.admins and event.source.host is not None and \
-            event.source.host.endswith(self.config.site.tld) and \
-            event.source.host.split(",")[0] not in self.config.admins
+        return event.source.nick in self.config.admins \
+            and event.source.host is not None \
+            and event.source.host.endswith(self.config.site.tld) \
+            and event.source.host.split(",")[0] not in self.config.admins
 
     def _dispatch(self, connection, event):
         """
@@ -196,11 +221,12 @@ class Hermes(SingleServerIRCBot):
         :param event: class that contains that describes the IRC event
             type (type of event, always privmsg)
             source (name of who sent the message containing host and nick)
-                nick - 
-                user - 
-                host - 
+                nick -
+                user -
+                host -
             target (name of who is recieving the message, in this case the bot name)
-            arguments (list of arguments to the event, for this, [0] is message that was sent)
+            arguments (list of arguments to the event, for this, [0] is message that
+                        was sent)
             tags (empty list)
         """
         event.msg = event.arguments[0]
@@ -219,13 +245,17 @@ class Hermes(SingleServerIRCBot):
                 try:
                     if event.type in func.events:
                         self._execute_function(func, connection, event)
-                except:
+                except BaseException:
                     if event.type == "privmsg":
-                        msg = "I'm sorry, {}.{} threw an exception. Please tell an " \
-                              "administrator and try again later.".format(name, func.__name__)
+                        msg = "I'm sorry, {}.{} threw an exception.".format(
+                            name,
+                            func.__name__
+                        )
+                        msg += " Please tell an administrator and try again later."
                         connection.privmsg(event.source.nick, msg)
-                    self.logger.exception("Failed to run function: {}.{}".format(name,
-                                                                                 func.__name__))
+                    self.logger.exception(
+                        "Failed to run function: {}.{}".format(name, func.__name__)
+                    )
 
     def disconnect(self, msg="I'll be back!"):
         if self.database is not None:
@@ -261,27 +291,34 @@ class BotCheck(threading.Thread):
         self.alive = False
         self.join()
 
+
 class SaveData(threading.Thread):
     def __init__(self, bot):
         super().__init__()
         self.alive = True
         self.bot = bot
+        self.logger = LOGGER
 
     def run(self):
-        time.sleep(120)
+        cycle = 480
         while self.alive:
-            self.bot.storage.save()
-            time.sleep(600)
+            if cycle >= 600:
+                self.logger.info('saving data')
+                self.bot.storage.save()
+                cycle = 0
+            cycle += 1
+            time.sleep(1)
 
     def stop(self):
         self.alive = False
         self.join()
 
+
 class Listener(threading.Thread):
     """
-    Gazelle communicates with the IRC bot through a socket. Gazelle will send things like
-    new torrents (via announce) or reports/errors that the bot would then properly relay
-    into the appropriate IRC channels.
+    Gazelle communicates with the IRC bot through a socket. Gazelle will send things
+    like new torrents (via announce) or reports/errors that the bot would then properly
+    relay into the appropriate IRC channels.
     """
     def __init__(self, host, port):
         self.logger = LOGGER
@@ -306,26 +343,44 @@ class Listener(threading.Thread):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind((self.host, self.port))
         server_socket.listen(5)
-        self.logger.info("-> Listener waiting for connection on port {}".format(self.port))
+        self.logger.info(
+            "-> Listener waiting for connection on port {}".format(self.port)
+        )
         while self.running:
             if self.restart:
                 server_socket.send("RESTARTING")
                 server_socket.close()
-                server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                server_socket = socket.socket(
+                    socket.AF_INET,
+                    socket.SOCK_STREAM
+                )
                 server_socket.bind((self.host, self.port))
                 server_socket.listen(5)
             client_socket, address = server_socket.accept()
-            data = client_socket.recv(512).decode('utf-8').strip()
+            # Only accept 510 bytes as irc module appends b'\r\n' to bring
+            # us to max of 512
+            data = client_socket.recv(510).decode('utf-8', errors='replace').strip()
             self.logger.info("-> Listener Recieved: {}".format(data))
             client_socket.close()
             try:
                 data_details = data.split()
-                if data_details[0] in ["/privmsg", "privmsg"] and data_details[1] == "#":
+                if len(data_details) < 2:
+                    continue
+                if data_details[0] in ["/privmsg", "privmsg"] \
+                        and data_details[1] == "#":
                     continue
                 if self.connection is not None:
                     self.connection.send_raw(data)
             except socket.error as e:
-                self.logger.error("*** Socket Error: %d: %s ***" % (e.args[0], e.args[1]))
+                self.logger.error(
+                    "*** Socket Error: %d: %s ***" % (e.args[0], e.args[1])
+                )
+            except irc.client.MessageTooLong:
+                self.logger.warn("-> Skipping input as too long: {}".format(data))
+            except irc.client.InvalidCharacters:
+                self.logger.warn(
+                    "-> Skipping message as contained newlines: {}".format(data)
+                )
         server_socket.close()
 
 
@@ -338,28 +393,44 @@ def get_version_string():
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description="CLI for the hermes IRC bot for Gazelle")
-    parser.add_argument("-v", "--verbose", action='count', default=0,
-                        help="Define how much logging to do. -v will log to file, -vv will also"
-                             "log to sys.stdout")
-    parser.add_argument("--log-level", action='store', choices=['debug', 'info', 'warn', 'error'],
-                        default='info',
-                        help="What level of messages should be logged by hermes. Most "
-                             "logged messages are either INFO or ERROR.")
-    parser.add_argument("-V", action='version',
-                        version="%(prog)s ({})".format(get_version_string()))
-    parser.add_argument("--nofork", action="store_true", default=False,
-                        help="Don't hermes as a forked daemon, as you'd like to interact with"
-                             "the terminal it lives in in some way. This is automatically turned "
-                             "on if you pass in the flag -vv.")
-    parser.add_argument("--no-eternal", action="store_true", default=False,
-                        help="By default, the bot will attempt to restart itself after a crash"
-                             "(assuming the last one was not 5 seconds ago), but use this flag"
-                             "if you want the bot to die immediately.")
-    parser.add_argument("--stop", action='store_true', default=False,
-                        help='Try and have a previous instance of Hermes gracefully stop')
-    parser.add_argument("--kill", action='store_true', default=False,
-                        help="Try and have a previous intance of Hermes exit immediately.")
+    parser = argparse.ArgumentParser(
+        description="CLI for the hermes IRC bot for Gazelle"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action='count', default=0,
+        help="Define how much logging to do. (-v to file, -vv to stdout)"
+    )
+    parser.add_argument(
+        "--log-level",
+        action='store', choices=['debug', 'info', 'warn', 'error'], default='info',
+        help="What level of messages should be logged by hermes."
+    )
+    parser.add_argument(
+        "-V", "--version",
+        action='version',
+        version="%(prog)s ({})".format(get_version_string())
+    )
+    parser.add_argument(
+        "--nofork",
+        action="store_true", default=False,
+        help="Don't run as forked daemon. (set if using -vv)"
+    )
+    parser.add_argument(
+        "--no-eternal",
+        action="store_true", default=False,
+        help="No not attempt to restart bot in case of crash"
+    )
+    parser.add_argument(
+        "--stop",
+        action='store_true', default=False,
+        help='Try and have a previous instance of Hermes gracefully stop'
+    )
+    parser.add_argument(
+        "--kill",
+        action='store_true', default=False,
+        help="Try and have a previous intance of Hermes exit immediately."
+    )
     return parser.parse_args()
 
 
@@ -391,30 +462,36 @@ def run_hermes():
                     print("Killing instance of Hermes ({})".format(old_pid))
                     os.kill(old_pid, signal.SIGKILL)
                 else:
-                    raise SystemExit("{} already exists, exiting".format(pidfile))
-                os.unlink(pidfile)
-                raise SystemExit()
+                    raise SystemExit(
+                        "{} already exists, exiting".format(pidfile)
+                    )
+                if os.path.isfile(pidfile):
+                    os.unlink(pidfile)
+                raise SystemExit(0)
             elif args.stop or args.kill:
                 raise SystemExit("Hermes is not currently running.")
 
-    # If we have set -vv, then we will not run as a daemon as we'll assume you wanted
+    # If we have set -vv, then we will not run as a daemon
+    # as we'll assume you wanted
     # to see the console output.
     if args.nofork is not True and args.verbose < 2:
         child_pid = os.fork()
-        if child_pid is not 0:
+        if child_pid != 0:
             raise SystemExit
 
     with open(pidfile, 'w') as open_pidfile:
         open_pidfile.write(str(os.getpid()))
 
-    last_run = None
+    irc.client.ServerConnection.buffer_class.errors = 'replace'
 
+    last_run = None
+    save_thread = None
     try:
         hermes = Hermes()
         save_thread = SaveData(hermes)
         save_thread.start()
-        #thread = BotCheck(hermes)
-        #thread.start()
+        # thread = BotCheck(hermes)
+        # thread.start()
 
         def signal_handler(sig, _):
             if sig is signal.SIGTERM:
@@ -423,7 +500,7 @@ def run_hermes():
                 hermes.die()
 
         signal.signal(signal.SIGTERM, signal_handler)
-        #signal.signal(signal.SIGKILL, signal_handler)
+        # signal.signal(signal.SIGKILL, signal_handler)
         while run_eternal:
             # noinspection PyBroadException
             try:
@@ -433,16 +510,15 @@ def run_hermes():
                 LOGGER.info("-> {}".format(e))
                 hermes.disconnect("Leaving...")
                 LOGGER.info("Quitting bot")
-                #thread.stop()
-                raise SystemExit
+                break
             except RestartException:
-                #thread.stop()
+                # thread.stop()
                 time.sleep(5)
                 hermes = Hermes()
-                #thread = BotCheck(hermes)
-                #thread.start()
+                # thread = BotCheck(hermes)
+                # thread.start()
                 hermes.start()
-            except:
+            except BaseException:
                 if last_run > time.time() - 5:
                     hermes.disconnect("Crashed, going offline.")
                     run_eternal = False
@@ -451,4 +527,7 @@ def run_hermes():
                     time.sleep(2)
                 LOGGER.exception("Crash")
     finally:
-        os.unlink(pidfile)
+        if save_thread is not None:
+            save_thread.stop()
+        if os.path.isfile(pidfile):
+            os.unlink(pidfile)

@@ -47,13 +47,16 @@ def get_git_hash():
     :return: str hash assuming hermes is in git repo, otherwise None
     """
     git_hash = None
-    if os.path.isdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".git")):
-        current_dir = os.getcwd()
-        git_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", )
-        os.chdir(git_dir)
-        out, _ = run_popen("git rev-parse HEAD --short")
-        os.chdir(current_dir)
-        git_hash = str(out, 'utf-8').strip()
+    git_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+    try:
+        if os.path.isdir(os.path.join(git_dir, ".git")):
+            current_dir = os.getcwd()
+            os.chdir(git_dir)
+            out, _ = run_popen("git rev-parse HEAD --short")
+            os.chdir(current_dir)
+            git_hash = str(out, 'utf-8').strip()
+    except FileNotFoundError:
+        pass
     return git_hash
 
 
@@ -101,7 +104,7 @@ class DotDict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
     __contains__ = dict.__contains__
-    
+
     def __getstate__(self):
         return self.__dict__
     def __setstate__(self, d):

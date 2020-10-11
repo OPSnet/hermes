@@ -10,7 +10,7 @@ The bot is written for Python 3.
 Installation
 ------------
 
-To install, run the setup.py file::
+To install, run the setup.py file
 
     python3 setup.py install
 
@@ -21,7 +21,7 @@ setup to create new bin files) to run the bot through the "hermes" command.
 Usage
 -----
 
-Running hermes::
+Running hermes
 
     bin/hermes
 

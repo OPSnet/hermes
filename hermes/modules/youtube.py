@@ -18,13 +18,13 @@ from hermes.module import event, rule, disabled
 @event("privmsg", "pubmsg")
 def parse_youtube(bot, connection, event, match):
     """
-    
-    :param bot: 
+
+    :param bot:
     :type bot: hermes.Hermes
-    :param connection: 
-    :param event: 
-    :param match: 
-    :return: 
+    :param connection:
+    :param event:
+    :param match:
+    :return:
     """
     if not hasattr(bot.config, "youtube_api"):
         return

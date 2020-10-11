@@ -23,7 +23,8 @@ def show_user(bot, connection, event):
     chan = event.target.lstrip('#').lower()
 
     if chan in bot.config.irc.channels:
-        if 'min_level' not in bot.config.irc.channels[chan]:
+        if 'public' in bot.config.irc.channels[chan] and \
+                bot.config.irc.channels[chan].public == True:
             return
     else:
         return

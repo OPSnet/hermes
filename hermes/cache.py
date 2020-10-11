@@ -6,10 +6,12 @@ from datetime import datetime, timedelta
 
 from .utils import DotDict
 
+
 class CacheObject(object):
     def __init__(self, value, expiry):
         self.value = value
         self.expiry = expiry
+
 
 class Cache(object):
     def __init__(self, storage=None, expiry=None):
@@ -41,6 +43,15 @@ class Cache(object):
     def __contains__(self, key):
         return key in self.storage
 
+    def keys(self):
+        return self.storage.keys()
+
+    def items(self):
+        return self.storage.items()
+
+    def values(self):
+        return self.storage.values()
+
     def store(self, key, value, expiry=None):
         if not expiry:
             expiry = self.expiry
@@ -63,7 +74,7 @@ class Cache(object):
             self.storage.clear()
 
     def expire(self):
-        for key in self.storage:
+        keys = [k for k in iter(self.storage)]
+        for key in keys:
             if self.storage[key].expiry < datetime.now():
                 del self.storage[key]
-

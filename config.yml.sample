@@ -1,16 +1,21 @@
 nick: hermes
 name: hermes bot
 site:
-  tld: apollo.rip
-  url: https://apollo.rip
+  tld: orpheus.network
+  url: https://orpheus.network
 irc:
   host: 127.0.0.1
   port: 6667
   channels:
-    apollo:
-      name: apollo
+    orpheus:
+      name: orpheus
+    announce:
+      name: announce
     devs:
       name: devs
+      min_level: 800
+    staff:
+      name: staff
       min_level: 800
   oper:
     name: hermes
@@ -18,18 +23,15 @@ irc:
   nickserv:
     password: password
 youtube_api: key
-database:
-  host: 127.0.0.1
-  port: 33060
-  dbname: gazelle
-  username: gazelle
-  password: password
+api:
+  id: id
+  key: password
 interview:
   class_id: 30
   min_level: 800
   speedtest_urls:
       - "(?:https?:\\/\\/)?(?:www\\.|beta\\.|legacy\\.)?speedtest\\.net\\/(?:my-)?result(?:\\/[\\w]{2})*\\/(\\d+)(?:\\.png)?"
-  site: https://interview.apollo.rip
+  site: https://interview.orpheus.network
   channels:
       - interview
       - interview2

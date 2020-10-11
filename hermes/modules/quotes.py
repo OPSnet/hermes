@@ -1,13 +1,14 @@
 """
-Module to provide FLS with canned responses.
-Administration is available from the designated FLS channel or via PM from FLS / staff
+Module to provide randomised quotes.
+Administration is available  via PM from staff
 """
 import re
+import random
 
 from hermes.module import event, command, rule
 from pprint import pprint, pformat
 
-key = "canned_responses"
+key = "quotes"
 
 def setup(bot):
     if bot.storage[key] is None:
@@ -15,17 +16,8 @@ def setup(bot):
 
 
 @event("pubmsg", "privmsg")
-@rule(r'^[!\.][a-zA-Z0-9]+')
-def can_trigger(bot, connection, event, match):
-    trigger = event.cmd.lower().strip('!.')
-    target = event.source.nick if event.type == 'privmsg' else event.target
-    if trigger in bot.storage[key]:
-        connection.privmsg(target, bot.storage[key][trigger])
-
-
-@event("pubmsg", "privmsg")
-@command("can")
-def can_admin(bot, connection, event):
+@command("quote")
+def quote_admin(bot, connection, event):
     """
     
     :param bot:
@@ -39,56 +31,58 @@ def can_admin(bot, connection, event):
     host = event.source.host
     chan = event.target
 
-    if event.type == 'privmsg':
-        if not check_auth(bot, connection, host, nick, False):
-            return
-    else:
-        if not chan.strip('#').lower() == bot.config.fls.channel.lower():
-            return
+    if event.type == 'pubmsg':
+        target = event.source.nick if event.type == 'privmsg' else event.target
+        if len(bot.storage[key]) > 0:
+            connection.privmsg(target, random.choice(list(bot.storage[key].values())))
+        return
+
+    if not check_auth(bot, connection, host, nick, False):
+        return
 
     command = None if len(event.args) == 0 else event.args[0]
     args = None if len(event.args) < 2 else event.args[1:]
 
     if command == 'add':
-        can_add(bot, connection, event, args)
+        quote_add(bot, connection, event, args)
     elif command == 'del':
-        can_del(bot, connection, event, args)
+        quote_del(bot, connection, event, args)
     elif command == 'list' or command is None:
-        can_list(bot, connection, event, args)
+        quote_list(bot, connection, event, args)
 
 
-def can_add(bot, connection, event, args):
+def quote_add(bot, connection, event, args):
     trigger = None if args is None or len(args) == 0 else args[0]
     message = None if args is None or len(args) < 2 else args[1:]
     if trigger is None or message is None:
-        connection.notice(event.source.nick, "Please specify a trigger and message.")
+        connection.notice(event.source.nick, "Please specify a name and message.")
         return
 
     if trigger in bot.storage[key]:
-        connection.notice(event.source.nick, "Trigger {0} updated.".format(trigger))
+        connection.privmsg(event.source.nick, "Quote {0} updated.".format(trigger))
     else:
-        connection.notice(event.source.nick, "Trigger {0} added.".format(trigger))
+        connection.privmsg(event.source.nick, "Quote {0} added.".format(trigger))
 
     bot.storage[key][trigger] = " ".join(message)
 
 
-def can_del(bot, connection, event, args):
+def quote_del(bot, connection, event, args):
     trigger = None if args is None or len(args) == 0 else args[0]
     if trigger is None:
-        connection.notice(event.source.nick, "Please specify a trigger.")
+        connection.notice(event.source.nick, "Please specify a name.")
         return
 
     if trigger in bot.storage[key]:
-        connection.notice(event.source.nick, "Trigger {0} deleted.".format(trigger))
+        connection.notice(event.source.nick, "Quote {0} deleted.".format(trigger))
         del bot.storage[key][trigger]
     else:
-        connection.notice(event.source.nick, "Couldn't find trigger {0}.".format(trigger))
+        connection.notice(event.source.nick, "Couldn't find quote {0}.".format(trigger))
 
 
-def can_list(bot, connection, event, args):
-    connection.notice(event.source.nick, "Triggers:")
+def quote_list(bot, connection, event, args):
+    connection.notice(event.source.nick, "Quotes:")
     for trigger in bot.storage[key].keys():
-        connection.notice(event.source.nick, "!{0}: {1}".format(trigger,
+        connection.notice(event.source.nick, "{0}: {1}".format(trigger,
             bot.storage[key][trigger]))
 
 
@@ -103,12 +97,11 @@ def check_auth(bot, connection, host, nick, prompt):
         if user is None:
             if prompt:
                 connection.notice(nick, "You must be authed through the bot to administer \
-                        canned responses.")
+                        quotes.")
             return False
 
-        if bot.config.fls.class_id in user['SecondaryClasses'] or \
-                user['Level'] >= bot.config.fls.min_level:
-                    return True
+        if user['Level'] >= bot.config.quote.min_level:
+            return True
         else:
             if prompt:
                 connection.notice(nick, "You are not authorized to do this command!")

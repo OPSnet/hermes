@@ -1,7 +1,7 @@
 """
-Utility module that maps the various gazelle tables to SQLAlchemy classes so that we can
-use them nicely within hermes and not have to do something dumb like escaping our inputs
-for use within DB queries (like zookeeper).
+Utility module that maps the various gazelle tables to SQLAlchemy classes so
+that we can use them nicely within hermes and not have to do something dumb
+like escaping our inputs for use within DB queries (like zookeeper).
 """
 
 from sqlalchemy import create_engine, ForeignKey, Column
@@ -32,7 +32,7 @@ class GazelleDB(object):
         """
         Given a username, get the User that it matches, else return None
 
-        :param username: 
+        :param username:
         :return: User that the username belongs to if one exists
         :rtype: User
         """
@@ -42,7 +42,7 @@ class GazelleDB(object):
         """
         Given a topic id, get the Topic that it matches, else return None
 
-        :param topic_id: 
+        :param topic_id:
         :return: ForumTopics that topic_id belongs to if one exists
         :rtype: ForumTopics
         """

@@ -54,10 +54,13 @@ def update_bot(bot, connection, event):
         if err is not None and str(err, "utf-8") != "":
             bot.logger.error(str(err, "utf-8"))
         os.chdir(current_dir)
-        get_version(bot,connection, event)
-        #restart_bot(bot, connection, event)
+        get_version(bot, connection, event)
+        # restart_bot(bot, connection, event)
     else:
-        connection.privmsg(event.source.nick, "Can only update bot if run from git directory.")
+        connection.privmsg(
+            event.source.nick,
+            "Can only update bot if run from git directory."
+        )
 
 
 @admin_only()
@@ -72,7 +75,10 @@ def kill_bot(bot, *_):
 @privmsg()
 @command("version")
 def get_version(_, connection, event):
-    connection.privmsg(event.source.nick, "Running version: {}".format(get_version_string()))
+    connection.privmsg(
+        event.source.nick,
+        "Running version: {}".format(get_version_string())
+    )
 
 
 @admin_only()
@@ -82,7 +88,7 @@ def view_log(bot, connection, event):
     log_file = os.path.join(bot.dir, 'hermes.log')
     try:
         connection.privmsg(event.source.nick, "Log file: {}".format(log_file))
-        for line in file_tail(log_file, 10):
-            connection.privmsg(event.source.nick, line)
+        for line in file_tail(log_file, 30):
+            connection.privmsg(event.source.nick, line.strip())
     except Exception as e:
         connection.privmsg(event.source.nick, e)

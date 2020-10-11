@@ -6,11 +6,14 @@ from hermes.module import event, command, disabled, admin_only
 from time import time
 import re
 
-key = "interview_queue"
+key = 'interview_queue'
+speedtest_key = 'speedtest_history'
 
 def setup(bot):
     if bot.storage[key] is None:
         bot.storage[key] = list()
+    if bot.storage[speedtest_key] is None:
+        bot.storage[speedtest_key] = list()
 
 
 def convert_time(diff):
@@ -31,11 +34,11 @@ class UserClass:
         self.time = time()
         self.speed_test = speed_test
         self.postponed = False
-    
+
     def get_waited(self):
         waited = time() - self.time
         return convert_time(waited)
-    
+
     def get_waited_str(self):
         days, hours, minutes, seconds = self.get_waited()
         return "{} days, {} hours, {} minutes, and " \
@@ -54,6 +57,10 @@ def is_in_queue(bot, user, host):
             is_already_in_queue = True
             position = i
     return is_already_in_queue, position
+
+
+def is_url_reused(bot, url):
+    return url in bot.storage[speedtest_key]
 
 
 def check_auth(bot, connection, host, nick, prompt):
@@ -140,6 +147,11 @@ def queue(bot, connection, event):
             connection.notice(nick, "You are already in the queue at position "
                                     "{}.".format(str(position + 1)))
         else:
+            if is_url_reused(bot, speed_test):
+                connection.notice(nick, "Speedtest URL has already been used, take another")
+                return
+
+            bot.storage[speedtest_key].append(speed_test)
             bot.storage[key].append(UserClass(nick, host, user, speed_test))
             connection.notice(nick, "Successfully added to queue. You are at position "
                                     "{}.".format(str(len(bot.storage[key]))))
@@ -222,9 +234,9 @@ def postpone(bot, connection, event):
 
     :param bot:
     :type bot: hermes.Hermes
-    :param connection: 
+    :param connection:
     :param event:
-    :return: 
+    :return:
     """
     nick = event.source.nick
     user = event.source.user
@@ -251,9 +263,9 @@ def cancel(bot, connection, event):
 
     :param bot:
     :type bot: hermes.Hermes
-    :param connection: 
+    :param connection:
     :param event:
-    :return: 
+    :return:
     """
 
     nick = event.source.nick
