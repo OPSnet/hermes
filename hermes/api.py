@@ -1,13 +1,13 @@
 """
-API (not ajax.php) interface for Gazelle to get information from the database
-without having to directly connect to it. This class and Database should be
-interchangeable in the bot and have it function just fine.
+API interface to Gazelle, operates through the api.php endpoint
 """
+import logging
 import requests
-import json
 from urllib.parse import urljoin
 
 from .utils import convert
+
+LOGGER = logging.getLogger('hermes')
 
 
 class GazelleAPI(object):
@@ -21,128 +21,73 @@ class GazelleAPI(object):
         )
         self.cache = cache
 
-    def get_user(self, user):
+    def _get(self, parameters):
         try:
-            if isinstance(user, int):
-                r = requests.get(self.api_url, {
-                    "action": "user",
-                    "user_id": user
-                })
-            else:
-                r = requests.get(self.api_url, {
-                    "action": "user",
-                    "username": user
-                })
-
+            r = requests.get(self.api_url, parameters)
             if r.status_code == requests.codes.ok:
                 response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
+                if response['status'] == 200:
+                    return convert(response['response'])
+                else:
+                    None
             else:
-                return None
-        except OSError:
-            return None
-        except json.decoder.JSONDecodeError:
-            return None
+                LOGGER.error(f'Gazelle API returned status code {r.status_code}')
+        except Exception:
+            LOGGER.exception('Gazelle API network error')
+        return None
+
+    def get_user(self, user):
+        if isinstance(user, int):
+            return self._get({
+                "action": "user",
+                "user_id": user
+            })
+        else:
+            return self._get({
+                "action": "user",
+                "username": user
+            })
 
     def get_topic(self, topic_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "forum",
-                "topic_id": topic_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
+        self._get({
+            "action": "forum",
+            "topic_id": topic_id
+        })
 
     def get_wiki(self, wiki_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "wiki",
-                "wiki_id": wiki_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
+        self._get({
+            "action": "wiki",
+            "wiki_id": wiki_id
+        })
 
     def get_request(self, request_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "request",
-                "request_id": request_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
+        self._get({
+            "action": "request",
+            "request_id": request_id
+        })
 
     def get_torrent(self, torrent_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "torrent",
-                "req": "torrent",
-                "torrent_id": torrent_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
+        self._get({
+            "action": "torrent",
+            "req": "torrent",
+            "torrent_id": torrent_id
+        })
 
     def get_torrent_group(self, group_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "torrent",
-                "req": "group",
-                "group_id": group_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
+        self._get({
+            "action": "torrent",
+            "req": "group",
+            "group_id": group_id
+        })
 
     def get_artist(self, artist_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "artist",
-                "artist_id": artist_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
+        self._get({
+            "action": "artist",
+            "artist_id": artist_id
+        })
 
     def get_collage(self, collage_id):
-        try:
-            r = requests.get(self.api_url, {
-                "action": "collage",
-                "collage_id": collage_id
-            })
-            if r.status_code == requests.codes.ok:
-                response = r.json()
-                return convert(response['response']) if response['status'] == 200 else None
-            else:
-                return None
-        except OSError:
-            return None
-
-    def disconnect(self):
-        pass
+        self._get({
+            "action": "collage",
+            "collage_id": collage_id
+        })
