@@ -507,7 +507,7 @@ def run_hermes():
                 last_run = time.time()
                 hermes.start()
             except (KeyboardInterrupt, SystemError, SystemExit) as e:
-                LOGGER.info("-> {}".format(e))
+                LOGGER.info("-> {}".format(repr(e)))
                 hermes.disconnect("Leaving...")
                 LOGGER.info("Quitting bot")
                 break
