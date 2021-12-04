@@ -2,12 +2,13 @@
 Module to handle interview queues
 """
 
-from hermes.module import event, command, disabled, admin_only
+from hermes.module import event, command
 from time import time
 import re
 
 key = 'interview_queue'
 speedtest_key = 'speedtest_history'
+
 
 def setup(bot):
     if bot.storage[key] is None:
@@ -70,7 +71,7 @@ def check_auth(bot, connection, host, nick, prompt):
 
     if host.endswith(bot.config.site.tld):
         # Make sure that the one issuing the command is authorized to do so
-        user = bot.database.get_user(split_host[0])
+        user = bot.api.get_user(split_host[0])
         if user is None:
             if prompt:
                 connection.notice(nick, "You must be authed through the bot to start an interview.")
@@ -78,7 +79,7 @@ def check_auth(bot, connection, host, nick, prompt):
 
         if bot.config.interview.class_id in user['SecondaryClasses'] or \
                 user['Level'] >= bot.config.interview.min_level:
-                    return True
+            return True
         else:
             if prompt:
                 connection.notice(nick, "You are not authorized to do this command!")

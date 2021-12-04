@@ -22,7 +22,6 @@ import irc
 from irc.connection import Factory
 
 from .api import GazelleAPI
-from .database import GazelleDB
 from .irc import IRCBot
 from .loader import load_modules
 from .utils import get_git_hash, check_pid, load_config, DotDict
@@ -86,7 +85,6 @@ class Hermes(IRCBot):
         self.logger.info("-> Loaded Cache ({0} keys)".format(len(self.cache)))
 
         self.listener = None
-        self.database = None
 
         if 'socket' in self.config:
             self.listener = Listener(
@@ -94,22 +92,12 @@ class Hermes(IRCBot):
                 self.config['socket']['port']
             )
 
-        if 'database' in self.config:
-            self.database = GazelleDB(
-                self.config.database.host,
-                self.config.database.dbname,
-                self.config.database.username,
-                self.config.database.password
-            )
-        elif 'api' in self.config:
-            self.database = GazelleAPI(
-                self.config.site.url,
-                self.config.api.id,
-                self.config.api.key,
-                self.cache
-            )
-
-        self.logger.info("-> Loaded DB")
+        self.api = GazelleAPI(
+            self.config.site.url,
+            self.config.api.id,
+            self.config.api.key,
+            self.cache
+        )
 
         for name, mod in self.modules.items():
             # noinspection PyBroadException
@@ -258,8 +246,6 @@ class Hermes(IRCBot):
                     )
 
     def disconnect(self, msg="I'll be back!"):
-        if self.database is not None:
-            self.database.disconnect()
         if self.listener is not None:
             self.listener.stop()
         super(Hermes, self).disconnect(msg)

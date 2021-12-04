@@ -73,7 +73,7 @@ def enter(bot, connection, event):
 
     # Pull fresh copy of user, use the cached version if no user is found
     key = "user_{0}".format(username)
-    user = bot.database.get_user(username)
+    user = bot.api.get_user(username)
     if user is None:
         user = bot.cache[key]
     valid, error = validate_irckey(user, password)

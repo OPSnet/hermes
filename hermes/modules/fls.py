@@ -27,12 +27,12 @@ def can_trigger(bot, connection, event, match):
 @command("can")
 def can_admin(bot, connection, event):
     """
-    
+
     :param bot:
     :type bot: hermes.Hermes
-    :param connection: 
+    :param connection:
     :param event:
-    :return: 
+    :return:
     """
     nick = event.source.nick
     user = event.source.user
@@ -99,7 +99,7 @@ def check_auth(bot, connection, host, nick, prompt):
 
     if host.endswith(bot.config.site.tld):
         # Make sure that the one issuing the command is authorized to do so
-        user = bot.database.get_user(split_host[0])
+        user = bot.api.get_user(split_host[0])
         if user is None:
             if prompt:
                 connection.notice(nick, "You must be authed through the bot to administer \

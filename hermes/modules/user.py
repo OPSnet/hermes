@@ -12,12 +12,12 @@ from hermes.module import event, command
 @command("user", "u")
 def show_user(bot, connection, event):
     """
-    
+
     :param bot:
     :type bot: hermes.Hermes
-    :param connection: 
+    :param connection:
     :param event:
-    :return: 
+    :return:
     """
 
     chan = event.target.lstrip('#').lower()
@@ -41,7 +41,7 @@ def show_user(bot, connection, event):
     if username is None:
         connection.privmsg(event.target, "No user found with name {}".format(username))
         return
-    user = bot.database.get_user(username)
+    user = bot.api.get_user(username)
     if user is None or 'DisplayStats' not in user:
         connection.privmsg(event.target, "No user found with name {}".format(username))
         return
