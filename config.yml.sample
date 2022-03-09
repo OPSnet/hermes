@@ -46,4 +46,6 @@ persist:
   path: "!HERMES!/persist.dat"
 admins:
   - itismadness
-
+polling:
+  heartbeat: 60
+  threshold: 5
