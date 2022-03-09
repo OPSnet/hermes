@@ -92,3 +92,12 @@ def view_log(bot, connection, event):
             connection.privmsg(event.source.nick, line.strip())
     except Exception as e:
         connection.privmsg(event.source.nick, e)
+
+
+@admin_only()
+@privmsg()
+@command("resetpolls")
+def reset_polls(bot, connection, event):
+    bot.api_poll_results = []
+    bot.api_poll_messaged = False
+    connection.privmsg(event.source.nick, "Reset API polling service.")
