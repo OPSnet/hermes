@@ -96,7 +96,7 @@ def is_in_channel(user, channel):
 def next_user(bot, connection):
     while len(bot.storage[key]) > 0:
         user = bot.storage[key].pop(0)
-        if is_in_channel(user, bot.channels['#recruitment']):
+        if is_in_channel(user, bot.channels['#' + bot.config.interview.main_channel]):
             return user
     return None
 

@@ -3,6 +3,7 @@ name: hermes bot
 site:
   tld: orpheus.network
   url: https://orpheus.network
+  mod_level: 900
 irc:
   host: 127.0.0.1
   port: 6667
@@ -36,6 +37,7 @@ interview:
   speedtest_urls:
       - "(?:https?:\\/\\/)?(?:www\\.|beta\\.|legacy\\.)?speedtest\\.net\\/(?:my-)?result(?:\\/[\\w]{2})*\\/(\\d+)(?:\\.png)?"
   site: https://interview.orpheus.network
+  main_channel: recruitment
   channels:
       - interview
       - interview2
