@@ -28,12 +28,11 @@ class GazelleAPI(object):
                 response = r.json()
                 if response['status'] == 200:
                     return convert(response['response'])
-                else:
-                    None
             else:
                 LOGGER.error(f'Gazelle API returned status code {r.status_code}')
-        except Exception:
-            LOGGER.exception('Gazelle API network error')
+        except Exception as e:
+            LOGGER.warning('Gazelle API network error')
+            LOGGER.exception(e)
         return None
 
     def get_user(self, user):
@@ -49,45 +48,45 @@ class GazelleAPI(object):
             })
 
     def get_topic(self, topic_id):
-        self._get({
+        return self._get({
             "action": "forum",
             "topic_id": topic_id
         })
 
     def get_wiki(self, wiki_id):
-        self._get({
+        return self._get({
             "action": "wiki",
             "wiki_id": wiki_id
         })
 
     def get_request(self, request_id):
-        self._get({
+        return self._get({
             "action": "request",
             "request_id": request_id
         })
 
     def get_torrent(self, torrent_id):
-        self._get({
+        return self._get({
             "action": "torrent",
             "req": "torrent",
             "torrent_id": torrent_id
         })
 
     def get_torrent_group(self, group_id):
-        self._get({
+        return self._get({
             "action": "torrent",
             "req": "group",
             "group_id": group_id
         })
 
     def get_artist(self, artist_id):
-        self._get({
+        return self._get({
             "action": "artist",
             "artist_id": artist_id
         })
 
     def get_collage(self, collage_id):
-        self._get({
+        return self._get({
             "action": "collage",
             "collage_id": collage_id
         })
