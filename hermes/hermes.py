@@ -12,7 +12,6 @@ import os
 import random
 import re
 import signal
-import socket
 import ssl
 import sys
 import threading
@@ -85,15 +84,7 @@ class Hermes(IRCBot):
 
         self.logger.info("-> Loaded Cache ({0} keys)".format(len(self.cache)))
 
-        # FIXME: remove self.listener after gazelle is updated
-        self.listener = None
         self.http_listener = None
-
-        if 'socket' in self.config:
-            self.listener = Listener(
-                self.config['socket']['host'],
-                self.config['socket']['port']
-            )
         if 'http_socket' in self.config:
             self.http_listener = HttpThread(self.config['http_socket'])
 
@@ -177,9 +168,6 @@ class Hermes(IRCBot):
 
         self.set_nick(connection)
 
-        if self.listener is not None and not self.listener.is_alive():
-            self.listener.set_connection(connection)
-            self.listener.start()
         if self.http_listener is not None:
             self.http_listener.set_connection(connection)
             if not self.http_listener.is_alive():
@@ -255,8 +243,6 @@ class Hermes(IRCBot):
                     )
 
     def disconnect(self, msg="I'll be back!"):
-        if self.listener is not None:
-            self.listener.stop()
         super(Hermes, self).disconnect(msg)
 
     def restart(self):
@@ -307,76 +293,6 @@ class SaveData(threading.Thread):
     def stop(self):
         self.alive = False
         self.join()
-
-
-class Listener(threading.Thread):
-    """
-    Gazelle communicates with the IRC bot through a socket. Gazelle will send things
-    like new torrents (via announce) or reports/errors that the bot would then properly
-    relay into the appropriate IRC channels.
-    """
-    def __init__(self, host, port):
-        self.logger = LOGGER
-        self.running = True
-        self.restart = False
-        self.connection = None
-        self.host = host
-        self.port = port
-        threading.Thread.__init__(self)
-
-    def set_connection(self, connection):
-        self.connection = connection
-
-    def stop(self):
-        self.running = False
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((self.host, self.port))
-#        client_socket.send("QUITTING")
-        client_socket.close()
-
-    def run(self):
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind((self.host, self.port))
-        server_socket.listen(5)
-        self.logger.info(
-            "-> Listener waiting for connection on port {}".format(self.port)
-        )
-        while self.running:
-            if self.restart:
-                server_socket.send("RESTARTING")
-                server_socket.close()
-                server_socket = socket.socket(
-                    socket.AF_INET,
-                    socket.SOCK_STREAM
-                )
-                server_socket.bind((self.host, self.port))
-                server_socket.listen(5)
-            client_socket, address = server_socket.accept()
-            # Only accept 510 bytes as irc module appends b'\r\n' to bring
-            # us to max of 512
-            data = client_socket.recv(510).decode('utf-8', errors='replace').strip()
-            self.logger.info("-> Listener Recieved: {}".format(data))
-            client_socket.close()
-            try:
-                data_details = data.split()
-                if len(data_details) < 2:
-                    continue
-                if data_details[0] in ["/privmsg", "privmsg"] \
-                        and data_details[1] == "#":
-                    continue
-                if self.connection is not None:
-                    self.connection.send_raw(data)
-            except socket.error as e:
-                self.logger.error(
-                    "*** Socket Error: %d: %s ***" % (e.args[0], e.args[1])
-                )
-            except irc.client.MessageTooLong:
-                self.logger.warn("-> Skipping input as too long: {}".format(data))
-            except irc.client.InvalidCharacters:
-                self.logger.warn(
-                    "-> Skipping message as contained newlines: {}".format(data)
-                )
-        server_socket.close()
 
 
 def get_version_string():
