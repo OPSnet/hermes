@@ -22,6 +22,7 @@ import irc
 from irc.connection import Factory
 
 from .api import GazelleAPI
+from .httpsocket import HttpThread
 from .irc import IRCBot
 from .loader import load_modules
 from .utils import get_git_hash, check_pid, load_config, DotDict
@@ -84,13 +85,17 @@ class Hermes(IRCBot):
 
         self.logger.info("-> Loaded Cache ({0} keys)".format(len(self.cache)))
 
+        # FIXME: remove self.listener after gazelle is updated
         self.listener = None
+        self.http_listener = None
 
         if 'socket' in self.config:
             self.listener = Listener(
                 self.config['socket']['host'],
                 self.config['socket']['port']
             )
+        if 'http_socket' in self.config:
+            self.http_listener = HttpThread(self.config['http_socket'])
 
         self.api = GazelleAPI(
             self.config.site.url,
@@ -175,6 +180,10 @@ class Hermes(IRCBot):
         if self.listener is not None and not self.listener.is_alive():
             self.listener.set_connection(connection)
             self.listener.start()
+        if self.http_listener is not None:
+            self.http_listener.set_connection(connection)
+            if not self.http_listener.is_alive():
+                self.http_listener.start()
         if hasattr(self.config.irc, "channels") and \
                 isinstance(self.config.irc.channels, dict):
             for name in self.config.irc.channels:

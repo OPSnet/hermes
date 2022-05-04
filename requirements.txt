@@ -4,3 +4,4 @@ PyYAML
 requests
 sqlalchemy
 phpserialize
+flask
