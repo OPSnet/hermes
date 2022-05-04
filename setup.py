@@ -15,11 +15,8 @@ setup(
     entry_points={'console_scripts': ['hermes = hermes:run_hermes']},
     requires=[
         'irc',
-        'phpserialize',
-        'PyMySQL',
         'PyYAML',
         'requests',
-        'sqlalchemy'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',

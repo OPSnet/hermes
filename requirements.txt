@@ -1,7 +1,4 @@
 irc
-PyMySQL
 PyYAML
 requests
-sqlalchemy
-phpserialize
 flask
