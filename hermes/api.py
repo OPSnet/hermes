@@ -2,7 +2,7 @@
 API interface to Gazelle, operates through the api.php endpoint
 """
 import logging
-import requests
+from httpx import AsyncClient, codes
 from urllib.parse import urljoin
 
 from .utils import convert
@@ -20,11 +20,12 @@ class GazelleAPI(object):
             'api.php?aid={}&token={}'.format(api_id, api_key)
         )
         self.cache = cache
+        self.client = AsyncClient()
 
-    def _get(self, parameters):
+    async def _get(self, parameters):
         try:
-            r = requests.get(self.api_url, parameters)
-            if r.status_code == requests.codes.ok:
+            r = await self.client.get(self.api_url, params=parameters)
+            if r.status_code == codes.OK:
                 response = r.json()
                 if response['status'] == 200:
                     return convert(response['response'])
@@ -35,58 +36,58 @@ class GazelleAPI(object):
             LOGGER.exception(e)
         return None
 
-    def get_user(self, user):
+    async def get_user(self, user):
         if isinstance(user, int):
-            return self._get({
+            return await self._get({
                 "action": "user",
                 "user_id": user
             })
         else:
-            return self._get({
+            return await self._get({
                 "action": "user",
                 "username": user
             })
 
-    def get_topic(self, topic_id):
-        return self._get({
+    async def get_topic(self, topic_id):
+        return await self._get({
             "action": "forum",
             "topic_id": topic_id
         })
 
-    def get_wiki(self, wiki_id):
-        return self._get({
+    async def get_wiki(self, wiki_id):
+        return await self._get({
             "action": "wiki",
             "wiki_id": wiki_id
         })
 
-    def get_request(self, request_id):
-        return self._get({
+    async def get_request(self, request_id):
+        return await self._get({
             "action": "request",
             "request_id": request_id
         })
 
-    def get_torrent(self, torrent_id):
-        return self._get({
+    async def get_torrent(self, torrent_id):
+        return await self._get({
             "action": "torrent",
             "req": "torrent",
             "torrent_id": torrent_id
         })
 
-    def get_torrent_group(self, group_id):
-        return self._get({
+    async def get_torrent_group(self, group_id):
+        return await self._get({
             "action": "torrent",
             "req": "group",
             "group_id": group_id
         })
 
-    def get_artist(self, artist_id):
-        return self._get({
+    async def get_artist(self, artist_id):
+        return await self._get({
             "action": "artist",
             "artist_id": artist_id
         })
 
-    def get_collage(self, collage_id):
-        return self._get({
+    async def get_collage(self, collage_id):
+        return await self._get({
             "action": "collage",
             "collage_id": collage_id
         })

@@ -14,7 +14,7 @@ def check_perms(bot, channel, level):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/forums\.php\?[a-zA-Z0-9=&]*threadid=([0-9]+)", IGNORECASE)
-def parse_thread_url(bot, connection, event, match):
+async def parse_thread_url(bot, connection, event, match):
     """
 
     :param bot:
@@ -24,7 +24,7 @@ def parse_thread_url(bot, connection, event, match):
     :param match:
     :return:
     """
-    topic = bot.api.get_topic(int(match.group(1)))
+    topic = await bot.api.get_topic(int(match.group(1)))
     if topic is not None:
         if not check_perms(bot, event.target, topic.MinClassRead):
             return
@@ -35,8 +35,8 @@ def parse_thread_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/wiki\.php\?[a-zA-Z0-9=&]*id=([0-9]+)")
-def parse_wiki_url(bot, connection, event, match):
-    wiki = bot.api.get_wiki(int(match.group(1)))
+async def parse_wiki_url(bot, connection, event, match):
+    wiki = await bot.api.get_wiki(int(match.group(1)))
     if wiki is not None:
         if not check_perms(bot, event.target, wiki.MinClassRead):
             return
@@ -47,8 +47,8 @@ def parse_wiki_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/user\.php\?[a-zA-Z0-9=&]*id=([0-9]+)")
-def parse_user_url(bot, connection, event, match):
-    user = bot.api.get_user(int(match.group(1)))
+async def parse_user_url(bot, connection, event, match):
+    user = await bot.api.get_user(int(match.group(1)))
     if user is not None:
         msg = "[ {0} ] :: [ {1} ] :: [ Uploaded: {2} | Downloaded: {3} | " \
               "Ratio: {4} ]".format(user.Username, user.ClassName, user.DisplayStats.Uploaded,
@@ -58,8 +58,8 @@ def parse_user_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/requests\.php\?[a-zA-Z0-9=&]*id=([0-9]+)")
-def parse_request_url(bot, connection, event, match):
-    request = bot.api.get_request(int(match.group(1)))
+async def parse_request_url(bot, connection, event, match):
+    request = await bot.api.get_request(int(match.group(1)))
     if request is not None:
         msg = "[ Request :: {0} - {1} ({2}) ]".format(request.DisplayArtists, request.Title,
                 request.Year)
@@ -68,8 +68,8 @@ def parse_request_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/torrents\.php\?[a-zA-Z0-9=&]*torrentid=([0-9]+)")
-def parse_torrent_url(bot, connection, event, match):
-    torrent = bot.api.get_torrent(int(match.group(1)))
+async def parse_torrent_url(bot, connection, event, match):
+    torrent = await bot.api.get_torrent(int(match.group(1)))
     if torrent is not None:
         if torrent.HasLogDB == "1":
             log = " {0}%".format(torrent.LogScore)
@@ -86,8 +86,8 @@ def parse_torrent_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/torrents\.php[a-zA-Z0-9=&\?]*[\?&]id=([0-9]+)$")
-def parse_torrent_group_url(bot, connection, event, match):
-    group = bot.api.get_torrent_group(int(match.group(1)))
+async def parse_torrent_group_url(bot, connection, event, match):
+    group = await bot.api.get_torrent_group(int(match.group(1)))
     if group is not None:
         msg = "[ Torrent :: {0} - {1} ({2}) [{3}] ]".format(group.DisplayArtists, group.Name,
                 group.Year, group.ReleaseType)
@@ -96,8 +96,8 @@ def parse_torrent_group_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/artist\.php\?[a-zA-Z0-9=&]*id=([0-9]+)")
-def parse_artist_url(bot, connection, event, match):
-    artist = bot.api.get_artist(int(match.group(1)))
+async def parse_artist_url(bot, connection, event, match):
+    artist = await bot.api.get_artist(int(match.group(1)))
     if artist is not None:
         msg = "[ Artist :: {0} ]".format(artist.Name)
         connection.privmsg(event.target, msg)
@@ -105,8 +105,8 @@ def parse_artist_url(bot, connection, event, match):
 
 @event("pubmsg")
 @rule(r"https:\/\/orpheus\.network\/collages\.php\?[a-zA-Z0-9=&]*id=([0-9]+)")
-def parse_collage_url(bot, connection, event, match):
-    collage = bot.api.get_collage(int(match.group(1)))
+async def parse_collage_url(bot, connection, event, match):
+    collage = await bot.api.get_collage(int(match.group(1)))
     if collage is not None:
         msg = "[ Collage :: {0} [{1}] ]".format(collage.Name, collage.Category)
         connection.privmsg(event.target, msg)

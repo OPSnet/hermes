@@ -16,7 +16,7 @@ setup(
     requires=[
         'irc',
         'PyYAML',
-        'requests',
+        'httpx',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',

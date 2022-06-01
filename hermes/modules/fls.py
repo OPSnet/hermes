@@ -25,7 +25,7 @@ def can_trigger(bot, connection, event, match):
 
 @event("pubmsg", "privmsg")
 @command("can")
-def can_admin(bot, connection, event):
+async def can_admin(bot, connection, event):
     """
 
     :param bot:
@@ -40,7 +40,7 @@ def can_admin(bot, connection, event):
     chan = event.target
 
     if event.type == 'privmsg':
-        if not check_auth(bot, connection, host, nick, False):
+        if not await check_auth(bot, connection, host, nick, False):
             return
     else:
         if not chan.strip('#').lower() == bot.config.fls.channel.lower():
@@ -92,14 +92,14 @@ def can_list(bot, connection, event, args):
             bot.storage[key][trigger]))
 
 
-def check_auth(bot, connection, host, nick, prompt):
+async def check_auth(bot, connection, host, nick, prompt):
     split_host = host.split(".")
     if len(split_host) != 4:
         return False
 
     if host.endswith(bot.config.site.tld):
         # Make sure that the one issuing the command is authorized to do so
-        user = bot.api.get_user(split_host[0])
+        user = await bot.api.get_user(split_host[0])
         if user is None:
             if prompt:
                 connection.notice(nick, "You must be authed through the bot to administer \

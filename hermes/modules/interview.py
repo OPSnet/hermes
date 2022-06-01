@@ -64,14 +64,14 @@ def is_url_reused(bot, url):
     return url in bot.storage[speedtest_key]
 
 
-def check_auth(bot, connection, host, nick, prompt):
+async def check_auth(bot, connection, host, nick, prompt):
     split_host = host.split(".")
     if len(split_host) != 4:
         return False
 
     if host.endswith(bot.config.site.tld):
         # Make sure that the one issuing the command is authorized to do so
-        user = bot.api.get_user(split_host[0])
+        user = await bot.api.get_user(split_host[0])
         if user is None:
             if prompt:
                 connection.notice(nick, "You must be authed through the bot to start an interview.")
@@ -103,7 +103,7 @@ def next_user(bot, connection):
 
 @event("privmsg")
 @command("queue")
-def queue(bot, connection, event):
+async def queue(bot, connection, event):
     """
 
     :param bot:
@@ -116,7 +116,7 @@ def queue(bot, connection, event):
     user = event.source.user
     host = event.source.host
 
-    if check_auth(bot, connection, host, nick, False):
+    if await check_auth(bot, connection, host, nick, False):
         if len(bot.storage[key]) == 0:
             connection.notice(nick, "The queue is empty")
         else:
@@ -185,7 +185,7 @@ def info(bot, connection, event):
 
 @event("privmsg", "pubmsg")
 @command("next")
-def next_interview(bot, connection, event):
+async def next_interview(bot, connection, event):
     """
 
     :param bot:
@@ -203,7 +203,7 @@ def next_interview(bot, connection, event):
 
     chan = event.args[0].lstrip('#')
 
-    if check_auth(bot, connection, host, nick, True):
+    if await check_auth(bot, connection, host, nick, True):
         if chan.lower() not in bot.config.interview.channels:
             connection.notice(nick, "Must use an official interview channel: #{}".format(
                 ", #".join(bot.config.interview.channels)))

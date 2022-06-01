@@ -34,7 +34,7 @@ def validate_irckey(user, irckey):
          "enter #orpheus itismadness 123456",
          "enter #orpheus #announce itismadness 123456",
          "enter #orpheus,#announce itismadness 123456")
-def enter(bot, connection, event):
+async def enter(bot, connection, event):
     """
 
     :param bot:
@@ -73,7 +73,7 @@ def enter(bot, connection, event):
 
     # Pull fresh copy of user, use the cached version if no user is found
     key = "user_{0}".format(username)
-    user = bot.api.get_user(username)
+    user = await bot.api.get_user(username)
     if user is None:
         user = bot.cache[key]
     valid, error = validate_irckey(user, password)

@@ -8,7 +8,7 @@ see what it actually is.
 import locale
 import re
 
-import requests
+from httpx import AsyncClient
 from hermes.module import event, rule, disabled
 
 
@@ -16,7 +16,7 @@ from hermes.module import event, rule, disabled
 @rule(r"http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?[\w\?=]*)?",
       re.IGNORECASE)
 @event("privmsg", "pubmsg")
-def parse_youtube(bot, connection, event, match):
+async def parse_youtube(bot, connection, event, match):
     """
 
     :param bot:
@@ -36,7 +36,7 @@ def parse_youtube(bot, connection, event, match):
     video_id = match.group(1)
     params = {'key': bot.config.youtube_api, 'id': video_id, 'maxResults': 1,
               'part': 'id,snippet,statistics'}
-    req = requests.get("https://www.googleapis.com/youtube/v3/videos/", params)
+    req = await AsyncClient.get("https://www.googleapis.com/youtube/v3/videos/", params=params)
     payload = req.json()
     if payload['pageInfo']['totalResults'] == 0:
         return "Youtube video not found!"

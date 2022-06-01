@@ -10,7 +10,7 @@ from hermes.module import event, command
 
 @event("pubmsg")
 @command("user", "u")
-def show_user(bot, connection, event):
+async def show_user(bot, connection, event):
     """
 
     :param bot:
@@ -41,7 +41,7 @@ def show_user(bot, connection, event):
     if username is None:
         connection.privmsg(event.target, "No user found with name {}".format(username))
         return
-    user = bot.api.get_user(username)
+    user = await bot.api.get_user(username)
     if user is None or 'DisplayStats' not in user:
         connection.privmsg(event.target, "No user found with name {}".format(username))
         return
