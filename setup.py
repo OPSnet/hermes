@@ -3,8 +3,8 @@ import sys
 
 from hermes.hermes import __version__
 
-if sys.version_info < (3, 5):
-    raise SystemExit("hermes can only be installed using Python 3.5+")
+if sys.version_info < (3, 6):
+    raise SystemExit("hermes can only be installed using Python 3.6+")
 
 setup(
     name='hermes',
@@ -17,13 +17,13 @@ setup(
         'irc',
         'PyYAML',
         'httpx',
+        'flask',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Topic :: Communications :: Chat :: Internet Relay Chat'
     ]
