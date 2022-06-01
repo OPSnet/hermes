@@ -2,7 +2,7 @@
 API interface to Gazelle, operates through the api.php endpoint
 """
 import logging
-from httpx import AsyncClient, codes
+from httpx import AsyncClient, codes, ReadTimeout
 from urllib.parse import urljoin
 
 from .utils import convert
@@ -30,7 +30,10 @@ class GazelleAPI(object):
                 if response['status'] == 200:
                     return convert(response['response'])
             else:
-                LOGGER.error(f'Gazelle API returned status code {r.status_code}')
+                LOGGER.error(f'Gazelle API returned status code '
+                             f'{r.status_code} for {parameters}')
+        except ReadTimeout:
+            LOGGER.warning(f'Gazelle API timeout for {parameters}')
         except Exception as e:
             LOGGER.warning('Gazelle API network error')
             LOGGER.exception(e)
