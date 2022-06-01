@@ -1,3 +1,4 @@
+import threading
 import irc.bot
 import irc.client
 from datetime import datetime, timedelta
@@ -8,6 +9,7 @@ class ServerConnection(irc.client.ServerConnection):
         super(ServerConnection, self).__init__(reactor)
         self.last_ping = None
         self.last_pong = None
+        self._write_mutex = threading.Lock()
 
     def ping(self, target, target2=""):
         """Send a PING command."""
@@ -19,6 +21,10 @@ class ServerConnection(irc.client.ServerConnection):
     def kill(self, nick, comment=""):
         """Send a KILL command."""
         self.send_items('KILL', nick, comment and ':' + comment)
+
+    def send_raw(self, string):
+        with self._write_mutex:
+            super().send_raw(string)
 
 
 class Reactor(irc.client.Reactor):
