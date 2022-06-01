@@ -1,4 +1,4 @@
-irc
-PyYAML
-httpx
-flask
+irc==20.0.0
+PyYAML==6.0
+httpx==0.23.0
+flask==2.1.2
