@@ -10,7 +10,6 @@ import locale
 import logging
 import os
 import random
-import re
 import signal
 import ssl
 import sys
@@ -21,6 +20,7 @@ import irc
 from irc.connection import Factory
 
 from .api import GazelleAPI
+from .asyncio_runner import ModuleRunner
 from .httpsocket import HttpThread
 from .irc import IRCBot
 from .loader import load_modules
@@ -109,6 +109,8 @@ class Hermes(IRCBot):
         else:
             factory = Factory()
 
+        self.module_runner = ModuleRunner(self)
+
         super().__init__([(self.config.irc.host, self.config.irc.port)],
                          '{}{}'.format(self.nick, random.randint(1, 1000)), self.name,
                          connect_factory=factory)
@@ -168,6 +170,8 @@ class Hermes(IRCBot):
 
         self.set_nick(connection)
 
+        if not self.module_runner.is_alive():
+            self.module_runner.start()
         if self.http_listener is not None:
             self.http_listener.set_connection(connection)
             if not self.http_listener.is_alive():
@@ -180,19 +184,6 @@ class Hermes(IRCBot):
 
     def on_disconnect(self, connection, event):
         self.logger.info("-> Disconnected from IRC")
-
-    def _execute_function(self, func, connection, event):
-        cmd = event.cmd
-        if hasattr(func, "commands"):
-            for command in func.commands:
-                if cmd == "." + command or cmd == "!" + command or \
-                        (event.type == "privmsg" and cmd == command):
-                    func(self, connection, event)
-        if hasattr(func, "rules"):
-            for rule in func.rules:
-                match = re.search(rule, event.msg)
-                if match:
-                    func(self, connection, event, match)
 
     def check_admin(self, event):
         return event.source.nick in self.config.admins \
@@ -226,21 +217,9 @@ class Hermes(IRCBot):
                     continue
                 elif func.admin_only is True and not self.check_admin(event):
                     continue
-                # noinspection PyBroadException
-                try:
-                    if event.type in func.events:
-                        self._execute_function(func, connection, event)
-                except BaseException:
-                    if event.type == "privmsg":
-                        msg = "I'm sorry, {}.{} threw an exception.".format(
-                            name,
-                            func.__name__
-                        )
-                        msg += " Please tell an administrator and try again later."
-                        connection.privmsg(event.source.nick, msg)
-                    self.logger.exception(
-                        "Failed to run function: {}.{}".format(name, func.__name__)
-                    )
+                elif event.type not in func.events:
+                    continue
+                self.module_runner.queue(name, func, connection, event)
 
     def disconnect(self, msg="I'll be back!"):
         super(Hermes, self).disconnect(msg)
