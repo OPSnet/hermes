@@ -118,6 +118,11 @@ class Hermes(IRCBot):
             setattr(self, attr, self._dispatch)
         self.logger.info("-> Loaded IRC")
 
+        self.api_poll_heartbeat = self.config.polling.heartbeat
+        self.api_poll_threshold = self.config.polling.threshold
+        self.api_poll_results = []
+        self.api_poll_messaged = False
+
     def set_nick(self, connection):
         connection.send_raw('NICK {}'.format(self.nick))
         connection.send_raw('SETIDENT {} {}'.format(self.nick, self.nick))
@@ -273,6 +278,26 @@ class SaveData(threading.Thread):
         self.alive = False
         self.join()
 
+class PollApi(threading.Thread):
+    def __init__(self, bot):
+        super().__init__()
+        self.bot = bot
+
+    def run(self):
+        while True:
+            result = False
+            user = self.bot.database.get_user(1)
+            if user == None:
+                result = True
+            if len(self.bot.api_poll_results) < self.bot.api_poll_threshold:
+                self.bot.api_poll_results = self.bot.api_poll_results + [result]
+            else:
+                self.bot.api_poll_results = self.bot.api_poll_results[1:] + [result]
+            if all(self.bot.api_poll_results) and not self.bot.api_poll_messaged:
+                for admin in self.bot.config.admins:
+                    self.bot.connection.privmsg(admin, "Bad polls exceeded threshold. Is the site down?")
+                self.bot.api_poll_messaged = True
+            time.sleep(self.api_poll_heartbeat)
 
 def get_version_string():
     version_string = __version__
@@ -378,6 +403,8 @@ def run_hermes():
     save_thread = None
     try:
         hermes = Hermes()
+        api_poller = PollApi(hermes)
+        api_poller.start()
         save_thread = SaveData(hermes)
         save_thread.start()
         # thread = BotCheck(hermes)
